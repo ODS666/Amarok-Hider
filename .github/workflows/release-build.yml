@@ -1,0 +1,72 @@
+name: Release build
+
+# Manual release build. Produces a signed APK for every flavor:
+#
+#   appcenter -> deltazero.amarok        (same package name as the upstream release)
+#   foss      -> deltazero.amarok.foss
+#   playstore -> deltazero.amarok.app
+#
+# Signing: if the repository has KEY_STORE / RELEASE_STORE_PASSWORD /
+# RELEASE_KEY_ALIAS / RELEASE_KEY_PASSWORD configured as secrets, they are used.
+# Otherwise the build falls back to the debug.keystore committed to the
+# repository, which yields an installable but debug-signed APK.
+#
+# This is deliberately a separate workflow from release.yml: that one expects a
+# GitHub Release event (it uploads release assets) and hard-requires the release
+# keystore secrets.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Setup JDK
+        uses: actions/setup-java@v6
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Prepare signing key
+        run: |
+          if [ -n "${{ secrets.KEY_STORE }}" ]; then
+            echo "Using the release keystore from repository secrets."
+            echo '${{ secrets.KEY_STORE }}' | base64 --decode > signing.jks
+            echo "STORE_PASSWORD=${{ secrets.RELEASE_STORE_PASSWORD }}" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=${{ secrets.RELEASE_KEY_ALIAS }}" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=${{ secrets.RELEASE_KEY_PASSWORD }}" >> "$GITHUB_ENV"
+            echo "::notice::Signed with the repository release keystore."
+          else
+            echo "::warning::No KEY_STORE secret is configured - signing the release build with the bundled debug keystore. The APK is installable but is not release-signed, so it cannot upgrade an install signed with the official key."
+            cp debug.keystore signing.jks
+            echo "STORE_PASSWORD=android" >> "$GITHUB_ENV"
+            echo "KEY_ALIAS=androiddebugkey" >> "$GITHUB_ENV"
+            echo "KEY_PASSWORD=android" >> "$GITHUB_ENV"
+          fi
+
+      - name: Build release
+        run: |
+          echo 'org.gradle.caching=true' >> gradle.properties
+          echo 'org.gradle.parallel=true' >> gradle.properties
+          echo 'org.gradle.jvmargs=-Xmx2048m' >> gradle.properties
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file="$PWD/signing.jks" \
+            -Pandroid.injected.signing.store.password="$STORE_PASSWORD" \
+            -Pandroid.injected.signing.key.alias="$KEY_ALIAS" \
+            -Pandroid.injected.signing.key.password="$KEY_PASSWORD"
+
+      - name: Show artifact names
+        if: success()
+        run: ls -l app/build/outputs/apk/*/release/*.apk
+
+      - name: Upload APKs
+        if: success()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Amarok-release-${{ github.run_number }}
+          path: ${{ github.workspace }}/app/build/outputs/apk/*/release/*.apk
