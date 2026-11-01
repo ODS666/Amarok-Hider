@@ -183,7 +183,7 @@
     <string name="block_screenshots">Zablokovať snímky obrazovky</string>
     <string name="block_screenshots_description">Blokovanie snímok obrazovky v aplikácii Amarok a jej rozmazanie v zozname posledných aplikácií.</string>
     <string name="xposed_desc">Umožňuje Amaroku skryť aplikácie zo systémových ponúk.</string>
-    <string name="x_hide_description">Využitie Xposed na zlepšenie skrývania aplikácií. Skryté aplikácie už nebudú viditeľné v nastaveniach ani v iných aplikáciách. Vyžaduje sa rozhranie Xposed API ≥ 93.</string>
+    <string name="x_hide_description">Využitie Xposed na zlepšenie skrývania aplikácií. Skryté aplikácie už nebudú viditeľné v nastaveniach ani v iných aplikáciách. Vyžaduje sa rozhranie Xposed API ≥ 102.</string>
     <string name="enable_x_hide">Zapnutie funkcie XHide</string>
     <string name="enable_x_hide_description">Stav: %s</string>
     <string name="xposed_active">Aktívne, Xposed API %d</string>

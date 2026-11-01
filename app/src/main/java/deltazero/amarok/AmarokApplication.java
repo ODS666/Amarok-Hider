@@ -22,7 +22,6 @@ public class AmarokApplication extends Application {
         super.onCreate();
 
         // WARNING: Do not change the order of those initializations.
-        XHidePrefBridge.migratePrefsIfNeeded(this);
         PrefMgr.init(this);
         Hider.init();
         QSTileService.init(getApplicationContext());
@@ -40,8 +39,9 @@ public class AmarokApplication extends Application {
         screenStatusIntentFilter.addAction(Intent.ACTION_SCREEN_OFF);
         registerReceiver(new ScreenStatusReceiver(), screenStatusIntentFilter);
 
-        // Initialise XHidePrefBridge
-        XHidePrefBridge.init(this);
+        // Initialise XHidePrefBridge. Binds the Xposed framework service asynchronously; the module
+        // itself is notified of the configuration through the framework's remote preferences.
+        XHidePrefBridge.init();
 
         // Start PanicButton service
         QuickHideService.startService(this);

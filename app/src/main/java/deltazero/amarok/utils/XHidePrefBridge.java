@@ -1,106 +1,135 @@
 package deltazero.amarok.utils;
 
-import android.annotation.SuppressLint;
-import android.content.Context;
 import android.content.SharedPreferences;
+import android.os.Handler;
+import android.os.Looper;
 import android.util.Log;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.util.Objects;
 
-import deltazero.amarok.BuildConfig;
+import io.github.libxposed.service.XposedService;
+import io.github.libxposed.service.XposedServiceHelper;
 import deltazero.amarok.Hider;
 import deltazero.amarok.PrefMgr;
 import deltazero.amarok.xposed.utils.XPref;
 
-@SuppressLint("SdCardPath")
+/**
+ * Bridges Amarok's own preferences to the Xposed framework.
+ *
+ * <p>Replaces the legacy scheme, in which the module reflected {@code isModuleActive},
+ * {@code xposedVersion} and {@code xPrefDir} into this class and both sides shared a
+ * {@code MODE_WORLD_READABLE} preferences file that was copied around by hand. With libxposed API 102
+ * the framework owns that storage:</p>
+ *
+ * <ul>
+ *   <li>the app binds the framework service through {@link XposedServiceHelper} and writes the
+ *       configuration group through {@link XposedService#getRemotePreferences(String)};</li>
+ *   <li>the module reads the same group through {@code XposedInterface#getRemotePreferences}.</li>
+ * </ul>
+ *
+ * <p>Amarok's own process therefore no longer has to be in the module scope at all.</p>
+ */
 public class XHidePrefBridge {
     private static final String TAG = "XHidePrefBridge";
-    private static final String LOCAL_PREF_DIR = String.format("/data/data/%s/shared_prefs",
-            BuildConfig.APPLICATION_ID);
-    private static final String MAIN_PREF_FILENAME = PrefMgr.MAIN_PREF_FILENAME + ".xml";
 
-    /**
-     * @noinspection FieldCanBeLocal
-     */
+    private static final Handler MAIN_HANDLER = new Handler(Looper.getMainLooper());
+
     private static SharedPreferences.OnSharedPreferenceChangeListener hidePkgNamesChangeListener;
-    private static SharedPreferences.Editor xprefEditor;
+    private static volatile SharedPreferences.Editor xprefEditor;
 
-    public static boolean isModuleActive = false; /* Hooked by module */
-    public static int xposedVersion = 0; /* Hooked by module */
-    public static String xPrefDir = ""; /* Hooked by module */
+    /** True once the framework service is bound, i.e. the Xposed module is alive. */
+    public static volatile boolean isModuleActive = false;
+    /** Running Xposed API version; 0 while the module is not active. */
+    public static volatile int xposedVersion = 0;
+    /** Whether XHide can be offered in the settings UI. */
+    public static volatile boolean isAvailable = false;
 
-    public static boolean isAvailable = false;
+    private static boolean listenersRegistered = false;
 
-    /**
-     * Enabling the module in Xposed framework will cause lose of original preference, due to
-     * the new XSharedPreferences redirection. This function will copy the preferences in Amarok's
-     * local shared_prefs directory to the new XPref directory provided by the framework.
-     */
-    public static void migratePrefsIfNeeded(Context context) {
-        var localPrefFile = new File(LOCAL_PREF_DIR, MAIN_PREF_FILENAME);
-        var xPrefFile = new File(xPrefDir, MAIN_PREF_FILENAME);
-
-        if (!isModuleActive || xPrefFile.exists() || !localPrefFile.exists())
-            return;
-
-        Log.w(TAG, String.format("Try to migrate ordinary preferences to XPref directory: " +
-                "%s -> %s", LOCAL_PREF_DIR, xPrefDir));
-        try {
-            Files.copy(localPrefFile.toPath(), xPrefFile.toPath());
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to migrate preferences", e);
-            return;
-        }
-        Log.i(TAG, "Preferences migrated successfully");
+    private XHidePrefBridge() {
     }
 
-    @SuppressLint("WorldReadableFiles")
-    public static void init(Context context) {
-
-        if (!isModuleActive) {
-            Log.i(TAG, "Xposed module not active");
-            return;
-        } else {
-            Log.i(TAG, "Xposed module active, version = " + xposedVersion);
-        }
-
-        SharedPreferences xPref;
+    public static void init() {
         try {
-            xPref = context.getSharedPreferences(XPref.XPREF_PATH, Context.MODE_WORLD_READABLE);
-        } catch (SecurityException ignored) {
-            // The new XSharedPreferences is not enabled or module's not loading
-            Log.w(TAG, "Unsupported Xposed framework. Disabling XHide");
-            return;
+            XposedServiceHelper.registerListener(new XposedServiceHelper.OnServiceListener() {
+
+                @Override
+                public void onServiceBind(XposedService service) {
+                    Log.i(TAG, "Xposed service bound: "
+                            + service.getFrameworkName() + " " + service.getFrameworkVersion()
+                            + ", API " + service.getApiVersion());
+
+                    SharedPreferences.Editor editor;
+                    try {
+                        SharedPreferences xPref = service.getRemotePreferences(XPref.XPREF_GROUP);
+                        editor = xPref.edit();
+                    } catch (Throwable t) {
+                        Log.e(TAG, "Failed to open remote preferences", t);
+                        return;
+                    }
+
+                    xprefEditor = editor;
+                    xposedVersion = service.getApiVersion();
+                    isModuleActive = true;
+
+                    // SharedPreferences listeners, LiveData observers and the preference objects
+                    // we touch below all belong to the main thread.
+                    MAIN_HANDLER.post(() -> onServiceBoundOnMainThread());
+                }
+
+                @Override
+                public void onServiceDied(XposedService service) {
+                    Log.w(TAG, "Xposed service died");
+                    isModuleActive = false;
+                    isAvailable = false;
+                    xposedVersion = 0;
+                    xprefEditor = null;
+                }
+            });
+        } catch (Throwable t) {
+            Log.e(TAG, "Failed to register Xposed service listener", t);
+        }
+    }
+
+    private static void onServiceBoundOnMainThread() {
+        if (!listenersRegistered) {
+            hidePkgNamesChangeListener = (sharedPreferences, key) -> {
+                // Avoid listening to HIDE_PKG_NAMES changes: SharedPreferences tends to write
+                // Set<String> in memory first and flush asynchronously.
+                if (Objects.equals(key, PrefMgr.ENABLE_X_HIDE)) {
+                    commitNewValues();
+                }
+            };
+            PrefMgr.getPrefs().registerOnSharedPreferenceChangeListener(hidePkgNamesChangeListener);
+
+            Hider.state.observeForever(state -> commitNewValues());
+            listenersRegistered = true;
         }
 
-        xprefEditor = xPref.edit();
-
-        // Initialize the XPref with the current values
         commitNewValues();
-
-        // Setup listeners for changes in the preferences
-        hidePkgNamesChangeListener = (sharedPreferences, key) -> {
-            // Avoid listening to HIDE_PKG_NAMES changes. SharedPrefs trends to write Set<String>
-            // in memory first, then write to disk asynchronously.
-            if (Objects.equals(key, PrefMgr.ENABLE_X_HIDE)) {
-                commitNewValues();
-            }
-        };
-        PrefMgr.getPrefs().registerOnSharedPreferenceChangeListener(hidePkgNamesChangeListener);
-
-        Hider.state.observeForever(state -> commitNewValues());
-
-        Log.i(TAG, "XHide initialized.");
         isAvailable = true;
+        Log.i(TAG, "XHide initialized.");
     }
 
     private static void commitNewValues() {
+        SharedPreferences.Editor editor = xprefEditor;
+        if (editor == null) {
+            // Service went away between binding and this call.
+            return;
+        }
+
         Log.d(TAG, "Committing new values to XPref");
-        xprefEditor.putStringSet(XPref.HIDE_PKG_NAMES, PrefMgr.getHideApps());
-        xprefEditor.putBoolean(XPref.IS_ACTIVE, Hider.getState() == Hider.State.HIDDEN && PrefMgr.isXHideEnabled());
-        xprefEditor.commit();
+        try {
+            editor.putStringSet(XPref.HIDE_PKG_NAMES, PrefMgr.getHideApps());
+            editor.putBoolean(XPref.IS_ACTIVE,
+                    Hider.getState() == Hider.State.HIDDEN && PrefMgr.isXHideEnabled());
+            if (!editor.commit()) {
+                Log.w(TAG, "Failed to commit XPref values");
+            }
+        } catch (Throwable t) {
+            // The framework's editor talks to another process; a dead binder must not take the app
+            // (and these calls all happen on the main thread) down with it.
+            Log.e(TAG, "Failed to commit XPref values", t);
+        }
     }
 }

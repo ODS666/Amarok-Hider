@@ -29,6 +29,7 @@
     <application
         android:name=".AmarokApplication"
         android:allowBackup="true"
+        android:description="@string/xposed_desc"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:requestLegacyExternalStorage="true"
@@ -195,18 +196,13 @@
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
 
-        <meta-data
-            android:name="xposedmodule"
-            android:value="true" />
-        <meta-data
-            android:name="xposeddescription"
-            android:value="@string/xposed_desc" />
-        <meta-data
-            android:name="xposedminversion"
-            android:value="93" />
-        <meta-data
-            android:name="xposedscope"
-            android:value="android" />
+        <!--
+            Modern Xposed modules (libxposed API 102) no longer describe themselves through
+            <meta-data>. Module metadata lives in META-INF/xposed/module.prop, the entry point in
+            META-INF/xposed/java_init.list and the scope in META-INF/xposed/scope.list. The
+            framework takes the module name from android:label and the description from
+            android:description (both declared on <application> above).
+        -->
 
     </application>
 

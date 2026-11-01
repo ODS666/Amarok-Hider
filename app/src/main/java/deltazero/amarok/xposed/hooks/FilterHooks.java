@@ -1,11 +1,15 @@
 package deltazero.amarok.xposed.hooks;
 
-import com.github.kyuubiran.ezxhelper.Log;
-
 import java.util.ArrayList;
 import java.util.List;
 
+import io.github.libxposed.api.XposedModule;
+
 public class FilterHooks {
+
+    private FilterHooks() {
+    }
+
     /*
      Target 33 hooks: com.android.server.pm.IPackageManagerBase
      - public final ParceledListSlice<ApplicationInfo> getInstalledApplications(
@@ -13,13 +17,12 @@ public class FilterHooks {
      - public final ParceledListSlice<PackageInfo> getInstalledPackages(
                    @PackageManager.PackageInfoFlagsBits long flags, int userId)
      */
-    public static List<IHook> target33() {
-        Log.ix("Loading target33 FilterHooks", null);
+    public static List<IHook> target33(XposedModule module, ClassLoader classLoader) {
         List<IHook> hooks = new ArrayList<>();
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.IPackageManagerBase",
-                "getInstalledApplications", true));
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.IPackageManagerBase",
-                "getInstalledPackages", true));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.IPackageManagerBase", "getInstalledApplications", true));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.IPackageManagerBase", "getInstalledPackages", true));
         return hooks;
     }
 
@@ -30,13 +33,12 @@ public class FilterHooks {
      - public final ParceledListSlice<PackageInfo> getInstalledPackages(int flags, int userId)
      - public final ParceledListSlice<PackageInfo> getInstalledPackages(int flags, int userId)
      */
-    public static List<IHook> target31() {
-        Log.ix("Loading target31 FilterHooks", null);
+    public static List<IHook> target31(XposedModule module, ClassLoader classLoader) {
         List<IHook> hooks = new ArrayList<>();
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.PackageManagerService",
-                "getInstalledApplicationsListInternal", false));
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.PackageManagerService",
-                "getInstalledPackages", true));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.PackageManagerService", "getInstalledApplicationsListInternal", false));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.PackageManagerService", "getInstalledPackages", true));
         return hooks;
     }
 
@@ -45,13 +47,12 @@ public class FilterHooks {
     - private List<ApplicationInfo> getInstalledApplicationsListInternal(int flags, int userId, int callingUid)
     - public ParceledListSlice<PackageInfo> getInstalledPackages(int flags, int userId)
      */
-    public static List<IHook> target29() {
-        Log.ix("Loading target29 FilterHooks", null);
+    public static List<IHook> target29(XposedModule module, ClassLoader classLoader) {
         List<IHook> hooks = new ArrayList<>();
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.PackageManagerService",
-                "getInstalledApplicationsListInternal", false));
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.PackageManagerService",
-                "getInstalledPackages", true));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.PackageManagerService", "getInstalledApplicationsListInternal", false));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.PackageManagerService", "getInstalledPackages", true));
         return hooks;
     }
 
@@ -60,14 +61,12 @@ public class FilterHooks {
     - public ParceledListSlice<ApplicationInfo> getInstalledApplications(int flags, int userId)
     - public ParceledListSlice<PackageInfo> getInstalledPackages(int flags, int userId)
      */
-    public static List<IHook> legacy() {
-        Log.ix("Loading legacy FilterHooks", null);
+    public static List<IHook> legacy(XposedModule module, ClassLoader classLoader) {
         List<IHook> hooks = new ArrayList<>();
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.PackageManagerService",
-                "getInstalledApplications", true));
-        hooks.addAll(FilterHookFactory.build("com.android.server.pm.PackageManagerService",
-                "getInstalledPackages", true));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.PackageManagerService", "getInstalledApplications", true));
+        hooks.addAll(FilterHookFactory.build(module, classLoader,
+                "com.android.server.pm.PackageManagerService", "getInstalledPackages", true));
         return hooks;
     }
-
 }

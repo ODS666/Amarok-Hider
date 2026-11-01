@@ -11,7 +11,7 @@ Core Features
 
 - **File Hiding:** Obfuscation and Chmod modes.
 - **App Hiding:** Supports Root, Shizuku, Dhizuku, and DSM modes.
-- **XHide Module:** Uses Xposed to filter hidden apps from system queries.
+- **XHide Module:** Uses libxposed (Xposed API 102, requires LSPosed 2.x) to filter hidden apps from system queries.
 - **Panic Button:** Floating button to trigger hide operations.
 - **Quick Settings Tile:** Direct access for quick hide/unhide.
 - **App Lock:** Protects with password/fingerprint.
@@ -71,26 +71,35 @@ The `Hider` class serves as the central management system for both file and app 
 
 **Directory:** `app/src/main/java/deltazero/amarok/xposed/`
 
-Amarok is both an Android app and an Xposed module. The Xposed part is implemented in the `xposed` package.
+Amarok is both an Android app and an Xposed module. The Xposed part is implemented in the `xposed` package and targets the **modern Xposed API (libxposed 102)**, so it only loads on LSPosed 2.x.
 
 - **Purpose:** Provides system-level app hiding by intercepting Android’s PackageManager queries.
 - **Limitations:** Does not hide apps from launchers; use with other app hiding modes.
 
+#### Module Declaration
+
+Declared with resources, not with `AndroidManifest` `<meta-data>`:
+
+- `app/src/main/resources/META-INF/xposed/module.prop` — `minApiVersion` / `targetApiVersion` / `staticScope`
+- `app/src/main/resources/META-INF/xposed/java_init.list` — entry class
+- `app/src/main/resources/META-INF/xposed/scope.list` — `system` (system_server)
+
+Hooks are installed from `XposedEntry#onSystemServerStarting()`; `onPackageReady()` is never called for system_server. Modules targeting API 102 must not touch the legacy `de.robv.android.xposed` classes, which is why EzXHelper is no longer a dependency.
+
 #### Key Components
 
-- **XposedEntry:** Module’s main entry point.
+- **XposedEntry:** Module entry point; extends `io.github.libxposed.api.XposedModule`.
 - **FilterHooks:** Contains version-specific implementations.
+- **XLog:** Logging facade over `XposedInterface#log()` (replaces `XposedBridge.log()`).
 
 #### Communication and Preference Management
 
-The main app and the module run in different processes, so they communicate with each other through `XHidePrefBridge`.
+The main app and the module run in different processes and no longer share files. Configuration flows through the framework's remote preferences:
 
-- **XHidePrefBridge:**
-  - Receives module status/version (`isModuleActive`, `xposedVersion`)
-  - Sends updated app settings with `commitNewValues()`
-- **XPref:** Manages module-side cached preferences.
+- **XHidePrefBridge** (app side) binds the framework service with `XposedServiceHelper`. Once bound it writes the group `deltazero.amarok.xposed.prefs` through `XposedService#getRemotePreferences()` and exposes `isModuleActive` / `xposedVersion` / `isAvailable` to the UI.
+- **XPref** (module side) reads the same group through `XposedInterface#getRemotePreferences()` — read-only inside the hooked process — and caches `hidePkgNames` / `isActive`.
 
-When a hide/unhide operation is triggered, the main app will call `XHidePrefBridge.commitNewValues()` to activate the module for system queries filtering.
+When a hide/unhide operation is triggered, `XHidePrefBridge.commitNewValues()` pushes the values to the framework and the module picks them up on its next package query.
 
 ### 6. Quick Hide
 

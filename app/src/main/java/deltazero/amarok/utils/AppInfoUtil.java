@@ -38,8 +38,18 @@ public class AppInfoUtil {
         return str.toLowerCase().contains(searchStr.toLowerCase());
     }
 
+    /**
+     * Legacy Xposed modules advertise themselves with the "xposedmodule" meta-data. Modules built
+     * against libxposed API 102 carry their metadata in {@code META-INF/xposed/module.prop} instead,
+     * which {@link PackageManager} cannot see without opening the APK, so they are not detected
+     * here. {@code R.array.root_app_packages} still covers the frameworks users are most likely to
+     * have installed.
+     */
+    private static final String META_XPOSED_MODULE = "xposedmodule";
+
     private boolean isRootApp(ApplicationInfo appInfo) {
-        boolean isXposedModule = appInfo.metaData != null && appInfo.metaData.containsKey("xposedmodule");
+        boolean isXposedModule = appInfo.metaData != null
+                && appInfo.metaData.containsKey(META_XPOSED_MODULE);
         return isXposedModule || predefinedRootApps.contains(appInfo.packageName);
     }
 

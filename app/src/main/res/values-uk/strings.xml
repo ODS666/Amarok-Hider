@@ -159,7 +159,7 @@
     <string name="welcome_title">Ласкаво просимо</string>
     <string name="chmod_samsung_warning">Деякі користувачі Samsung повідомляли, що використання ChmodFileHider призводило до того, що їхні пристрої не завантажувалися. Зверніться до проблеми GitHub №105 для отримання додаткової інформації. Використовуйте на свій страх і ризик.</string>
     <string name="xposed_desc">Увімкніть Amarok, щоб приховати програми в системних меню.</string>
-    <string name="x_hide_description">Використання Xposed для покращення приховування програм. Приховані програми більше не відображатимуться в налаштуваннях або інших програмах. Потрібно API Xposed ≥ 93.</string>
+    <string name="x_hide_description">Використання Xposed для покращення приховування програм. Приховані програми більше не відображатимуться в налаштуваннях або інших програмах. Потрібно API Xposed ≥ 102.</string>
     <string name="block_screenshots">Блокувати скріншоти</string>
     <string name="invert_tile_color">Інвертувати колір плитки</string>
     <string name="warning">УВАГА</string>
