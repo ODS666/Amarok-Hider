@@ -16,7 +16,9 @@ android {
         applicationId "deltazero.amarok"
         minSdkVersion 26
         targetSdkVersion 36
-        compileSdk = 36
+        // io.github.libxposed:{service,interface}:102.0.0 declare a minCompileSdk of 37, so the
+        // project has to compile against at least API 37 even though it still targets 36 at runtime.
+        compileSdk = 37
         versionCode 124
         versionName "0.10.1"
 
