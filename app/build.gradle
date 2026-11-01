@@ -16,7 +16,9 @@ android {
         applicationId "deltazero.amarok"
         minSdkVersion 26
         targetSdkVersion 36
-        compileSdk = 36
+        // io.github.libxposed:{service,interface}:102.0.0 declare a minCompileSdk of 37, so the
+        // project has to compile against at least API 37 even though it still targets 36 at runtime.
+        compileSdk = 37
         versionCode 124
         versionName "0.10.1"
 
@@ -131,7 +133,6 @@ dependencies {
     implementation 'com.github.getActivity:XXPermissions:20.0'
     implementation 'com.github.getActivity:EasyWindow:10.62'
     implementation 'com.github.heruoxin.Delegated-Scopes-Manager:client:master-SNAPSHOT'
-    implementation 'com.github.kyuubiran:EzXHelper:2.2.1'
     implementation 'com.github.takusemba:spotlight:2.0.5'
     implementation 'com.github.topjohnwu.libsu:core:6.0.0'
     implementation 'com.github.skydoves:colorpickerview:2.3.0'
@@ -148,10 +149,14 @@ dependencies {
     implementation 'androidx.work:work-runtime:2.11.0'
     implementation 'org.apache.maven:maven-artifact:3.9.11'
 
-    // F-Droid disallow `api.xposed.info` since it's not a "Trusted Maven Repository".
-    // So we create a mirror GitHub repository and obtain the library from `jitpack.io` instead.
-    // Equivalent to `implementation 'de.robv.android.xposed:api:82'`.
-    compileOnly 'com.github.deltazefiro:XposedBridge:main-SNAPSHOT'
+    // Modern Xposed module API ("libxposed API 102"). `api` is compileOnly because the framework
+    // provides it inside the hooked process at runtime. `service` is what the Amarok app itself
+    // talks to the framework with (service binding + remote preferences); it is a normal library.
+    //
+    // Module metadata is no longer declared via AndroidManifest <meta-data>: see
+    // src/main/resources/META-INF/xposed/{module.prop,java_init.list,scope.list}.
+    compileOnly 'io.github.libxposed:api:102.0.0'
+    implementation 'io.github.libxposed:service:102.0.0'
 }
 
 configurations.configureEach {

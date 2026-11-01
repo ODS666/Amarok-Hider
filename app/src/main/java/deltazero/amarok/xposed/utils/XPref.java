@@ -1,44 +1,71 @@
 package deltazero.amarok.xposed.utils;
 
-import com.github.kyuubiran.ezxhelper.Log;
+import android.content.SharedPreferences;
 
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Set;
 
-import de.robv.android.xposed.XSharedPreferences;
-import deltazero.amarok.BuildConfig;
+import io.github.libxposed.api.XposedModule;
 
+/**
+ * Reads the XHide configuration from inside the hooked process.
+ *
+ * <p>Replaces {@code XSharedPreferences}. With libxposed API 102 the framework owns the shared
+ * storage: the module reads a "remote preferences" group through
+ * {@link io.github.libxposed.api.XposedInterface#getRemotePreferences(String)} (read-only here) and
+ * the Amarok app writes the very same group through {@code XposedService#getRemotePreferences}. The
+ * group name is intentionally kept equal to the old {@code XSharedPreferences} file name.</p>
+ */
 public class XPref {
-    private static XSharedPreferences xPref;
 
-    public static final String XPREF_PATH = "deltazero.amarok.xposed.prefs";
+    public static final String XPREF_GROUP = "deltazero.amarok.xposed.prefs";
     public static final String HIDE_PKG_NAMES = "hidePkgNames";
     public static final String IS_ACTIVE = "isActive";
 
-    private static boolean isActiveCache = false;
-    private static Set<String> hidePkgNamesCache = Collections.emptySet();
+    private static volatile SharedPreferences xPref;
+    private static volatile boolean isActiveCache = false;
+    private static volatile Set<String> hidePkgNamesCache = Collections.emptySet();
 
-    public static void init() {
-        Log.d("Initializing XPref...", null);
+    private XPref() {
+    }
 
-        xPref = new XSharedPreferences(BuildConfig.APPLICATION_ID, XPREF_PATH);
-        Log.d("xPref path: " + xPref.getFile().getAbsolutePath(), null);
+    public static void init(XposedModule module) {
+        XLog.d("Initializing XPref...");
 
-        if (xPref.getFile().canRead()) {
-            xPref.reload();
-            Log.d("xPref content: " + xPref.getAll(), null);
-        } else {
-            Log.wx("No XPref found. Launch Amarok once to activate XHide.", null);
+        SharedPreferences pref;
+        try {
+            // Read-only in the hooked process: Amarok itself is the only writer.
+            pref = module.getRemotePreferences(XPREF_GROUP);
+        } catch (Throwable t) {
+            XLog.e("Failed to acquire remote preferences, XHide will stay inactive", t);
+            return;
         }
 
-        Log.ix("XPref initialized.", null);
+        try {
+            XLog.d("xPref content: " + pref.getAll());
+        } catch (Throwable ignored) {
+            // Logging is best-effort only.
+        }
+
+        xPref = pref;
+        refreshCache();
+        XLog.i("XPref initialized.");
     }
 
     public static void refreshCache() {
-        xPref.reload();
-        if (!xPref.getFile().canRead()) return;
-        isActiveCache = xPref.getBoolean(IS_ACTIVE, false);
-        hidePkgNamesCache = xPref.getStringSet(HIDE_PKG_NAMES, Collections.emptySet());
+        SharedPreferences pref = xPref;
+        if (pref == null) return;
+
+        try {
+            isActiveCache = pref.getBoolean(IS_ACTIVE, false);
+            Set<String> names = pref.getStringSet(HIDE_PKG_NAMES, Collections.emptySet());
+            hidePkgNamesCache = names == null
+                    ? Collections.emptySet()
+                    : Collections.unmodifiableSet(new HashSet<>(names));
+        } catch (Throwable t) {
+            XLog.e("Failed to refresh XPref cache", t);
+        }
     }
 
     public static boolean isXHideActive() {
@@ -47,11 +74,5 @@ public class XPref {
 
     public static boolean shouldHide(String pkgName) {
         return hidePkgNamesCache.contains(pkgName);
-    }
-
-    public static String getXPrefDir() {
-        // This function can be called without initializing XPref
-        return new XSharedPreferences(BuildConfig.APPLICATION_ID, XPREF_PATH)
-                .getFile().getParentFile().getAbsolutePath();
     }
 }

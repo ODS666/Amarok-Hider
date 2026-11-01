@@ -14,7 +14,7 @@
     <string name="xposed_active">活動的、Xposed API%d</string>
     <string name="enable_x_hide_description">狀態：%s</string>
     <string name="enable_x_hide">啓用XHide</string>
-    <string name="x_hide_description">利用Xposed增強應用隱藏功能。隱藏的應用將不再在設置或其他應用中可見。需要Xposed API ≥ 93 。</string>
+    <string name="x_hide_description">利用Xposed增強應用隱藏功能。隱藏的應用將不再在設置或其他應用中可見。需要Xposed API ≥ 102 。</string>
     <string name="xposed_desc">啓用Amarok以隱藏系統菜單中的應用程序。</string>
     <string name="block_screenshots_description">在Amarok中禁止截圖，並在最近應用列表中模糊顯示。</string>
     <string name="block_screenshots">禁止截圖</string>

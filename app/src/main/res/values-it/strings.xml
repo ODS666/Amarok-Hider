@@ -186,7 +186,7 @@
     <string name="dhizuku_failed_to_set_delegated_scopes">Dhizuku: Impossibile concedere `DELEGATION_PACKAGE_ACCESS`. Prova a riattivare Dhizuku.</string>
     <string name="block_screenshots">Blocca gli screenshot</string>
     <string name="invert_tile_color">Inverti colore tile</string>
-    <string name="x_hide_description">Utilizza Xposed per migliorare il nascondimento delle app. Le app nascoste non saranno più visibili nelle impostazioni o in altre app. È richiesta l\'API Xposed ≥ 93.</string>
+    <string name="x_hide_description">Utilizza Xposed per migliorare il nascondimento delle app. Le app nascoste non saranno più visibili nelle impostazioni o in altre app. È richiesta l\'API Xposed ≥ 102.</string>
     <string name="invert_tile_color_description">Per impostazione predefinita, il riquadro delle impostazioni rapide appare attivato quando la tua privacy è visibile. Attiva questa opzione per invertire il comportamento.</string>
     <string name="display_root_apps">Mostra applicazioni di root</string>
     <string name="block_screenshots_description">Blocca gli screenshot in Amarok e Sfocala dalla lista delle app recenti.</string>

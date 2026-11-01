@@ -1,70 +1,114 @@
 package deltazero.amarok.xposed.hooks;
 
-import com.github.kyuubiran.ezxhelper.ClassUtils;
-import com.github.kyuubiran.ezxhelper.HookFactory;
-import com.github.kyuubiran.ezxhelper.Log;
-import com.github.kyuubiran.ezxhelper.finders.MethodFinder;
-
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import de.robv.android.xposed.XC_MethodHook;
+import io.github.libxposed.api.XposedInterface;
+import io.github.libxposed.api.XposedModule;
 import deltazero.amarok.xposed.utils.FilterUtils;
+import deltazero.amarok.xposed.utils.XLog;
 import deltazero.amarok.xposed.utils.XPref;
 
+/**
+ * Builds filters for the package-manager listing methods that system_server hands out to apps.
+ *
+ * <p>Migrated from the legacy {@code XC_MethodHook} model to the libxposed interceptor-chain model:
+ * what used to be an {@code after} callback is now {@code chain.proceed()} followed by rewriting the
+ * returned value.</p>
+ */
 public class FilterHookFactory {
-    public static List<IHook> build(String className, String methodName, boolean isSlice) {
+
+    private FilterHookFactory() {
+    }
+
+    public static List<IHook> build(XposedModule module,
+                                    ClassLoader classLoader,
+                                    String className,
+                                    String methodName,
+                                    boolean isSlice) {
         Class<?> c;
         try {
-            c = ClassUtils.loadClass(className, null);
+            c = Class.forName(className, false, classLoader);
         } catch (ClassNotFoundException e) {
-            Log.ex(String.format("Error when initializing: %s$%s", className, methodName), e);
+            XLog.e("Class not found when initializing hook: " + className, e);
             return Collections.emptyList();
         }
 
-        var methods = MethodFinder.fromClass(c).filterByName(methodName).toSet();
+        List<Method> methods = findDeclaredMethods(c, methodName);
         if (methods.isEmpty()) {
-            Log.ex(String.format("Method not found: %s$%s", methodName, c), null);
+            XLog.e("Method not found: " + className + "#" + methodName);
             return Collections.emptyList();
         }
 
         List<IHook> hooks = new ArrayList<>();
-        for (var m : methods) {
+        for (Method m : methods) {
             hooks.add(new IHook() {
 
-                private XC_MethodHook.Unhook unhook;
+                private XposedInterface.HookHandle handle;
 
                 @Override
                 public String getName() {
                     return m.getName();
                 }
 
-                /** @noinspection unchecked*/
+                @SuppressWarnings("unchecked")
                 @Override
                 public void load() {
-                    Log.d(String.format("Loading hook: %s", m), null);
+                    XLog.d("Loading hook: " + m);
                     try {
-                        unhook = HookFactory.createMethodHook(m, hookFactory -> hookFactory.after(param -> {
-                            try {
-                                XPref.refreshCache();
-                                param.setResult(isSlice
-                                        ? FilterUtils.filterAppsOrPkgsInSlices(param.getResult(), m)
-                                        : FilterUtils.filterAppsOrPkgs((List<Object>) param.getResult(), m));
-                            } catch (Exception e) {
-                                Log.ex(String.format("Error while hooking %s", m), e);
-                                unhook.unhook();
-                            }
-                        }));
-                    } catch (Exception e) {
-                        Log.ex(String.format("Hooked failed: %s", m), e);
-                    } finally {
-                        Log.ix(String.format("Method hooked: %s", m), null);
+                        handle = module.hook(m)
+                                .setPriority(XposedInterface.PRIORITY_DEFAULT)
+                                .intercept(chain -> {
+                                    // Legacy `after` hook equivalent: run the original first, then
+                                    // rewrite whatever it returned.
+                                    Object result = chain.proceed();
+                                    try {
+                                        XPref.refreshCache();
+                                        return isSlice
+                                                ? FilterUtils.filterAppsOrPkgsInSlices(result, m)
+                                                : FilterUtils.filterAppsOrPkgs((List<Object>) result, m);
+                                    } catch (Throwable t) {
+                                        // Never let a filter failure take system_server down: drop
+                                        // this hook and return the unfiltered result instead.
+                                        XLog.e("Error while filtering " + m + ", unhooking", t);
+                                        XposedInterface.HookHandle h = handle;
+                                        if (h != null) h.unhook();
+                                        return result;
+                                    }
+                                });
+                        XLog.i("Method hooked: " + m);
+                    } catch (Throwable t) {
+                        XLog.e("Hook failed: " + m, t);
                     }
                 }
-
             });
         }
         return hooks;
+    }
+
+    /**
+     * Collects every method with the given name declared by {@code c} or any of its superclasses.
+     *
+     * <p>The old code used EzXHelper's {@code MethodFinder}, which walked the class hierarchy; plain
+     * {@code getDeclaredMethods()} on the target class alone would silently miss inherited methods
+     * such as {@code IPackageManagerBase} implementations.</p>
+     */
+    private static List<Method> findDeclaredMethods(Class<?> c, String methodName) {
+        List<Method> found = new ArrayList<>();
+        for (Class<?> k = c; k != null && k != Object.class; k = k.getSuperclass()) {
+            Method[] declared;
+            try {
+                declared = k.getDeclaredMethods();
+            } catch (Throwable t) {
+                XLog.e("Failed to enumerate methods of " + k.getName(), t);
+                continue;
+            }
+            for (Method m : declared) {
+                if (m.getName().equals(methodName)) found.add(m);
+            }
+        }
+        return found;
     }
 }

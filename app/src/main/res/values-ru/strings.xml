@@ -180,7 +180,7 @@
     <string name="block_screenshots_description">Блокируйте скриншоты в Amarok и размывайте их в списке недавних приложений.</string>
     <string name="invert_tile_color">Инвертировать цвет плитки</string>
     <string name="invert_tile_color_description">По умолчанию плитка быстрых настроек отображается активированной, когда видна ваша конфиденциальность. Переключите этот параметр, чтобы изменить поведение.</string>
-    <string name="x_hide_description">Использование Xposed для улучшения скрытия приложений. Скрытые приложения больше не будут видны в настройках и других приложениях. Требуется Xposed API ≥ 93.</string>
+    <string name="x_hide_description">Использование Xposed для улучшения скрытия приложений. Скрытые приложения больше не будут видны в настройках и других приложениях. Требуется Xposed API ≥ 102.</string>
     <string name="enable_x_hide">Включить XHide</string>
     <string name="enable_x_hide_description">Статус: %s</string>
     <string name="xposed_active">Активно, Xposed API %d</string>

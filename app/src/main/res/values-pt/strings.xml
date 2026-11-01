@@ -183,7 +183,7 @@
     <string name="block_screenshots">Bloquear captura de ecrã</string>
     <string name="block_screenshots_description">Bloquear captura de ecrã no Amarok e ofuscar na lista de apps recentes.</string>
     <string name="xposed_desc">Ativar o Amarok de ocultar aplicações nos menus do sistema.</string>
-    <string name="x_hide_description">A utilizar o Xposed para aprimorar a ocultar apps. As apps ocultas já não estarão visíveis nas configurações ou em outras apps. É necessário no ≥ 93 da API do Xposed.</string>
+    <string name="x_hide_description">A utilizar o Xposed para aprimorar a ocultar apps. As apps ocultas já não estarão visíveis nas configurações ou em outras apps. É necessário no ≥ 102 da API do Xposed.</string>
     <string name="enable_x_hide">Ativar XHide</string>
     <string name="enable_x_hide_description">Estado: %s</string>
     <string name="disable_only_with_xhide">Somente desativar apps</string>

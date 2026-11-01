@@ -114,7 +114,7 @@
     <string name="appearance">外観</string>
     <string name="dynamic_color_description">アプリの色にダイナミックカラーを利用する。</string>
     <string name="enable_x_hide">XHideの有効化</string>
-    <string name="x_hide_description">Xposedを活用してアプリの非表示を強化。非表示アプリが設定や他のアプリで表示されなくなる。Xposed API93以上が必要。</string>
+    <string name="x_hide_description">Xposedを活用してアプリの非表示を強化。非表示アプリが設定や他のアプリで表示されなくなる。Xposed API102以上が必要。</string>
     <string name="xposed_inactive">モジュールが無効。Xposed managerをチェックしてください。</string>
     <string name="disable_toasts">トーストの非表示</string>
     <string name="disable_toasts_description">非表示/非表示解除のトースト通知を表示しない。</string>

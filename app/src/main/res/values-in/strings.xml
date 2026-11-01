@@ -172,7 +172,7 @@
     <string name="auto_hide_delay">Jeda AutoSembunyikan</string>
     <string name="auto_hide_delay_description">Jumlah menit yang dibutuhkan untuk berjeda sebelum masuk mode \"Sembunyikan\" setelah layar mati.</string>
     <string name="xposed_desc">Memungkinkan Amarok agar menyembunyikan aplikasi dari menu sistem.</string>
-    <string name="x_hide_description">Gunakan modul Xposed/LSPosed untuk meningkatkan fungsi penyembunyian aplikasi. Aplikasi yg disembunyikan tidak akan terdeteksi oleh pengaturan atau aplikasi lain. Dibutuhkan Xposed API ≥ 93.</string>
+    <string name="x_hide_description">Gunakan modul Xposed/LSPosed untuk meningkatkan fungsi penyembunyian aplikasi. Aplikasi yg disembunyikan tidak akan terdeteksi oleh pengaturan atau aplikasi lain. Dibutuhkan Xposed API ≥ 102.</string>
     <string name="xposed_active">Aktif, Xposed API %d</string>
     <string name="xposed_inactive">Modul takktif. Cek manajer Xposed?</string>
     <string name="disable_toasts">Matikan notifikasi</string>
